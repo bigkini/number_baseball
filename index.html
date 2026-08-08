@@ -1,0 +1,652 @@
+<!doctype html>
+<html lang="ko">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Number Baseball</title>
+        <style>
+            :root {
+                --bg: #f8fafc;
+                --text: #0f172a;
+                --muted: #64748b;
+                --line: #e2e8f0;
+                --board: #475569;
+                --blue: #3b82f6;
+                --ball: #4ea3ac;
+                --strike: #f59e0b;
+                --success: #10b981;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                min-height: 100vh;
+                margin: 0;
+                padding: 28px 18px;
+                background: var(--bg);
+                color: var(--text);
+                font-family:
+                    Pretendard,
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    "Segoe UI",
+                    sans-serif;
+            }
+            .app {
+                width: min(100%, 1040px);
+                margin: auto;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) minmax(360px, 0.82fr);
+                gap: 18px;
+                align-items: start;
+            }
+            header {
+                grid-column: 1 / -1;
+                text-align: center;
+                margin-bottom: 0;
+            }
+            h1 {
+                margin: 5px 0 7px;
+                font-size: 1.7rem;
+                letter-spacing: -0.04em;
+            }
+            .status {
+                color: var(--blue);
+                font-weight: 700;
+            }
+            .controls {
+                grid-column: 1 / -1;
+                display: flex;
+                justify-content: center;
+                gap: 8px;
+                margin-bottom: 0;
+            }
+            button {
+                padding: 10px 18px;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                background: #fff;
+                color: var(--text);
+                font-size: 14px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+            button:disabled {
+                opacity: 0.5;
+            }
+            .reset {
+                border: 0;
+                background: var(--blue);
+                color: #fff;
+            }
+            .card {
+                grid-column: 2;
+                grid-row: 3;
+                position: relative;
+                padding: 22px;
+                border-radius: 12px;
+                background: var(--board);
+                box-shadow: 0 10px 25px #0f172a21;
+            }
+            .score {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 5px;
+                margin-bottom: 16px;
+            }
+            .score div {
+                padding: 11px;
+                border-radius: 7px;
+                background: #ffffff14;
+                color: #fff;
+                text-align: center;
+            }
+            .score strong {
+                display: block;
+                font-size: 1.1rem;
+            }
+            .score span {
+                color: #cbd5e1;
+                font-size: 0.72rem;
+            }
+            .digits {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            }
+            .digit {
+                display: grid;
+                place-items: center;
+                aspect-ratio: 1;
+                border-radius: 7px;
+                background: #fff;
+                color: #cbd5e1;
+                font-size: clamp(1.7rem, 10vw, 2.5rem);
+                font-weight: 800;
+                box-shadow: inset 0 -2px #0000000f;
+            }
+            .digit.filled {
+                color: #1e293b;
+            }
+            .help {
+                min-height: 18px;
+                margin: 13px 0;
+                color: #cbd5e1;
+                text-align: center;
+                font-size: 0.78rem;
+            }
+            .help.error {
+                color: #fecaca;
+                font-weight: 700;
+            }
+            .actions {
+                display: grid;
+                grid-template-columns: 1fr 2fr;
+                gap: 8px;
+            }
+            .submit {
+                border: 0;
+                background: var(--strike);
+                color: #fff;
+            }
+            .panel {
+                grid-column: 1;
+                grid-row: 3;
+                margin-top: 0;
+                padding: 16px;
+                border: 1px solid var(--line);
+                border-radius: 10px;
+                background: #fff;
+            }
+            .panel-head {
+                display: flex;
+                align-items: flex-start;
+                justify-content: space-between;
+                gap: 12px;
+                margin-bottom: 13px;
+            }
+            .panel h2 {
+                margin: 0;
+                font-size: 0.9rem;
+            }
+            .panel-note {
+                margin: 3px 0 0;
+                color: var(--muted);
+                font-size: 0.72rem;
+            }
+            .legend {
+                display: flex;
+                gap: 7px;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                font-size: 0.65rem;
+                color: var(--muted);
+            }
+            .legend span {
+                display: flex;
+                align-items: center;
+                gap: 3px;
+            }
+            .dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 2px;
+            }
+            .dot.no {
+                background: #e2e8f0;
+            }
+            .dot.maybe {
+                background: #aaf1ed;
+            }
+            .dot.yes {
+                background: var(--success);
+            }
+            .position-grid {
+                display: grid;
+                gap: 7px;
+            }
+            .position-row {
+                display: grid;
+                grid-template-columns: 36px repeat(10, 1fr);
+                gap: 4px;
+                align-items: center;
+            }
+            .position-label {
+                color: var(--muted);
+                font-size: 0.7rem;
+                font-weight: 800;
+            }
+            .possibility {
+                display: grid;
+                place-items: center;
+                min-width: 0;
+                aspect-ratio: 1;
+                border-radius: 5px;
+                font: 700 clamp(0.65rem, 2.4vw, 0.78rem) monospace;
+            }
+            .possibility.no {
+                background: #e2e8f0;
+                color: #94a3b8;
+            }
+            .possibility.maybe {
+                background: #aaf1ed;
+                color: #155e75;
+            }
+            .possibility.yes {
+                background: var(--success);
+                color: #fff;
+                box-shadow: 0 0 0 2px #a7f3d0;
+            }
+            .candidates {
+                margin-top: 14px;
+                padding: 14px;
+                border-radius: 8px;
+                background: #fef3c7;
+            }
+            .candidate-head {
+                display: flex;
+                justify-content: space-between;
+                color: #92400e;
+                font-size: 0.78rem;
+                font-weight: 800;
+            }
+            .candidate-list {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                margin-top: 10px;
+            }
+            .candidate-list span {
+                padding: 6px 8px;
+                border-radius: 5px;
+                background: #fff;
+                color: #78350f;
+                font: 700 0.8rem monospace;
+            }
+            .history {
+                grid-column: 1 / -1;
+                margin-top: 20px;
+            }
+            .history-head {
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 8px;
+            }
+            .history-head h2 {
+                margin: 0;
+                font-size: 0.9rem;
+            }
+            .history-head span {
+                color: var(--muted);
+                font-size: 0.75rem;
+            }
+            .history-list {
+                display: grid;
+                gap: 7px;
+            }
+            .history-item {
+                display: grid;
+                grid-template-columns: 30px 1fr auto;
+                align-items: center;
+                padding: 11px 13px;
+                border: 1px solid var(--line);
+                border-radius: 8px;
+                background: #fff;
+            }
+            .turn {
+                color: #94a3b8;
+                font: 0.72rem monospace;
+            }
+            .guess {
+                font: 800 1.05rem monospace;
+                letter-spacing: 0.16em;
+            }
+            .result {
+                display: flex;
+                gap: 5px;
+                font: 800 0.75rem monospace;
+            }
+            .strike,
+            .ball {
+                padding: 5px 7px;
+                border-radius: 5px;
+                color: #fff;
+            }
+            .strike {
+                background: var(--strike);
+            }
+            .ball {
+                background: var(--ball);
+            }
+            .empty {
+                padding: 22px;
+                border: 1px dashed #cbd5e1;
+                border-radius: 8px;
+                color: #94a3b8;
+                text-align: center;
+                font-size: 0.82rem;
+            }
+            .overlay {
+                position: absolute;
+                inset: 0;
+                z-index: 10;
+                display: none;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                border-radius: 12px;
+                background: #fffffff2;
+                backdrop-filter: blur(5px);
+            }
+            .overlay.show {
+                display: flex;
+            }
+            .win {
+                color: var(--success);
+                font-size: 1.5rem;
+                font-weight: 800;
+            }
+            .answer {
+                margin: 8px;
+                font: 800 2rem monospace;
+                letter-spacing: 0.15em;
+            }
+            .detail {
+                margin: 0 0 22px;
+                color: var(--muted);
+                font-size: 0.8rem;
+            }
+            .replay {
+                border: 0;
+                background: var(--success);
+                color: #fff;
+            }
+            .rules {
+                grid-column: 1 / -1;
+                text-align: center;
+                color: var(--muted);
+                font-size: 0.72rem;
+                line-height: 1.7;
+            }
+            [hidden] {
+                display: none !important;
+            }
+            @media (max-width: 480px) {
+                body {
+                    padding: 24px 10px;
+                }
+                .card {
+                    padding: 16px;
+                }
+                .panel {
+                    padding: 12px;
+                }
+                .position-row {
+                    grid-template-columns: 30px repeat(10, 1fr);
+                    gap: 3px;
+                }
+                .possibility {
+                    border-radius: 4px;
+                }
+            }
+            @media (max-width: 820px) {
+                .app {
+                    display: block;
+                    width: min(100%, 520px);
+                }
+                header,
+                .controls,
+                .panel,
+                .card,
+                .history,
+                .rules {
+                    margin-top: 0;
+                }
+                header,
+                .controls,
+                .panel,
+                .card {
+                    margin-bottom: 18px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main class="app">
+            <header>
+                <h1>Number Baseball</h1>
+                <div class="status">4 Digits · 0–9</div>
+            </header>
+            <div class="controls">
+                <button class="reset">새 게임</button><button id="rules-button">게임 규칙</button>
+            </div>
+            <section class="card">
+                <div class="score">
+                    <div><strong id="attempts">0</strong><span>시도</span></div>
+                    <div><strong id="count">5,040</strong><span>남은 후보</span></div>
+                </div>
+                <div class="digits" id="digits">
+                    <div class="digit">·</div>
+                    <div class="digit">·</div>
+                    <div class="digit">·</div>
+                    <div class="digit">·</div>
+                </div>
+                <p class="help" id="help">키보드 숫자키로 입력하세요</p>
+                <div class="actions">
+                    <button id="back" disabled>지우기</button><button class="submit" id="submit">확인</button>
+                </div>
+                <aside class="candidates" id="candidates" hidden>
+                    <div class="candidate-head"><span>가능한 숫자</span><strong id="short-count"></strong></div>
+                    <div class="candidate-list" id="candidate-list"></div>
+                </aside>
+                <div class="overlay" id="overlay">
+                    <div class="win">⚾ Home Run!</div>
+                    <div class="answer" id="answer"></div>
+                    <p class="detail" id="detail"></p>
+                    <button class="replay">다시 하기</button>
+                </div>
+            </section>
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>자리별 가능성</h2>
+                        <p class="panel-note">남은 후보를 기준으로 계산합니다.</p>
+                    </div>
+                    <div class="legend">
+                        <span><i class="dot no"></i>불가능</span><span><i class="dot maybe"></i>가능</span
+                        ><span><i class="dot yes"></i>확정</span>
+                    </div>
+                </div>
+                <div class="position-grid" id="position-grid"></div>
+            </section>
+            <section class="history">
+                <div class="history-head">
+                    <h2>History</h2>
+                    <span id="history-status">아직 기록이 없어요</span>
+                </div>
+                <div class="empty" id="empty">첫 번째 숫자를 입력해 보세요.</div>
+                <div class="history-list" id="history-list"></div>
+            </section>
+            <p class="rules" id="rules" hidden>
+                숫자와 위치가 같으면 스트라이크, 숫자만 같으면 볼입니다.<br />숫자는 중복되지 않으며 첫 자리에는 0도 올
+                수 있어요.
+            </p>
+        </main>
+        <script>
+            const ALL = [];
+            for (let n = 0; n < 10000; n++) {
+                const v = String(n).padStart(4, "0");
+                if (new Set(v).size === 4) ALL.push(v);
+            }
+            const $ = (id) => document.getElementById(id),
+                digitEls = [...document.querySelectorAll(".digit")];
+            let secret, input, history, candidates, solved;
+            function score(a, g) {
+                let strikes = 0,
+                    balls = 0;
+                for (let i = 0; i < 4; i++) {
+                    if (a[i] === g[i]) strikes++;
+                    else if (a.includes(g[i])) balls++;
+                }
+                return { strikes, balls };
+            }
+            function message(text = "키보드 숫자키로 입력하세요", error = false) {
+                $("help").textContent = text;
+                $("help").className = "help" + (error ? " error" : "");
+            }
+            function renderInput() {
+                digitEls.forEach((el, i) => {
+                    el.textContent = input[i] || "·";
+                    el.classList.toggle("filled", !!input[i]);
+                });
+                $("back").disabled = !input;
+            }
+            function renderPossibilities() {
+                const labels = ["1번째", "2번째", "3번째", "4번째"];
+                $("position-grid").innerHTML = labels
+                    .map((label, pos) => {
+                        const cells = Array.from({ length: 10 }, (_, digit) => {
+                            const hits = candidates.filter((value) => Number(value[pos]) === digit).length;
+                            const state = hits === 0 ? "no" : hits === candidates.length ? "yes" : "maybe";
+                            const percent = candidates.length ? Math.round((hits / candidates.length) * 100) : 0;
+                            return `<span class="possibility ${state}" title="${label} 자리 숫자 ${digit}: ${percent}% (${hits}/${candidates.length})">${digit}</span>`;
+                        }).join("");
+                        return `<div class="position-row"><span class="position-label">${label}</span>${cells}</div>`;
+                    })
+                    .join("");
+            }
+            function render() {
+                $("attempts").textContent = history.length;
+                $("count").textContent = candidates.length.toLocaleString("ko-KR");
+                $("history-status").textContent = history.length ? `총 ${history.length}번 시도` : "아직 기록이 없어요";
+                $("empty").hidden = history.length > 0;
+                $("history-list").innerHTML = history
+                    .map(
+                        (x, i) =>
+                            `<div class="history-item"><span class="turn">${history.length - i}</span><strong class="guess">${x.guess}</strong><div class="result"><span class="strike">${x.strikes}S</span><span class="ball">${x.balls}B</span></div></div>`
+                    )
+                    .join("");
+                const show = !solved && history.length && candidates.length <= 20;
+                $("candidates").hidden = !show;
+                if (show) {
+                    $("short-count").textContent = candidates.length;
+                    $("candidate-list").innerHTML = candidates.map((v) => `<span>${v}</span>`).join("");
+                }
+                renderPossibilities();
+            }
+            function typeDigit(v) {
+                if (solved || input.length === 4 || input.includes(v)) return;
+                input += v;
+                message();
+                renderInput();
+            }
+            function submit() {
+                if (solved) return;
+                if (input.length !== 4) return message("중복 없이 숫자 4개를 입력해 주세요.", true);
+                const result = { guess: input, ...score(secret, input) };
+                history.unshift(result);
+                candidates = candidates.filter((c) =>
+                    history.every((x) => {
+                        const s = score(c, x.guess);
+                        return s.strikes === x.strikes && s.balls === x.balls;
+                    })
+                );
+                solved = result.strikes === 4;
+                input = "";
+                renderInput();
+                render();
+                if (solved) {
+                    $("answer").textContent = secret;
+                    $("detail").textContent = `${history.length}번 만에 맞혔어요. Enter를 누르면 새 게임이 시작됩니다.`;
+                    $("overlay").classList.add("show");
+                }
+            }
+            function reset() {
+                secret = ALL[Math.floor(Math.random() * ALL.length)];
+                input = "";
+                history = [];
+                candidates = [...ALL];
+                solved = false;
+                $("overlay").classList.remove("show");
+                message();
+                renderInput();
+                render();
+            }
+            document.addEventListener("keydown", (e) => {
+                if (/^\d$/.test(e.key)) {
+                    e.preventDefault();
+                    typeDigit(e.key);
+                } else if (e.key === "Backspace") {
+                    e.preventDefault();
+                    input = input.slice(0, -1);
+                    renderInput();
+                } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    if (solved) reset();
+                    else submit();
+                }
+            });
+            $("back").onclick = () => {
+                input = input.slice(0, -1);
+                renderInput();
+            };
+            $("submit").onclick = submit;
+            document.querySelectorAll(".reset,.replay").forEach((b) => (b.onclick = reset));
+            $("rules-button").onclick = () => {
+                $("rules").hidden = !$("rules").hidden;
+            };
+            reset();
+        </script>
+        <style>
+            .position-grid {
+                display: grid;
+                grid-template-columns: 40px repeat(4, 1fr);
+                gap: 5px;
+                align-items: center;
+            }
+            .position-row {
+                display: contents;
+            }
+            .position-label {
+                padding-bottom: 3px;
+                text-align: center;
+            }
+            .number-label {
+                color: #475569;
+                text-align: center;
+                font: 800 0.75rem monospace;
+            }
+            .possibility {
+                min-height: 32px;
+                aspect-ratio: auto;
+            }
+            @media (max-width: 480px) {
+                .position-grid {
+                    grid-template-columns: 32px repeat(4, 1fr);
+                    gap: 4px;
+                }
+                .possibility {
+                    min-height: 30px;
+                }
+            }
+        </style>
+        <script>
+            renderPossibilities = function () {
+                const labels = ["1번째", "2번째", "3번째", "4번째"];
+                let html =
+                    "<span></span>" + labels.map((label) => `<span class="position-label">${label}</span>`).join("");
+                for (let digit = 0; digit < 10; digit++) {
+                    html += `<span class="number-label">${digit}</span>`;
+                    for (let pos = 0; pos < 4; pos++) {
+                        const hits = candidates.filter((value) => Number(value[pos]) === digit).length;
+                        const state = hits === 0 ? "no" : hits === candidates.length ? "yes" : "maybe";
+                        const percent = candidates.length ? Math.round((hits / candidates.length) * 100) : 0;
+                        html += `<span class="possibility ${state}" title="${labels[pos]} 자리 숫자 ${digit}: ${percent}% (${hits}/${candidates.length})">${digit}</span>`;
+                    }
+                }
+                $("position-grid").innerHTML = html;
+            };
+            renderPossibilities();
+        </script>
+    </body>
+</html>
